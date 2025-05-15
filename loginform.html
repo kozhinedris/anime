@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #74ebd5, #9face6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-form {
+      background: #ffffff;
+      padding: 30px;
+      border-radius: 15px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+      width: 100%;
+      max-width: 320px;
+      transition: transform 0.3s ease;
+    }
+
+    .login-form:hover {
+      transform: scale(1.02);
+    }
+
+    .login-form h2 {
+      text-align: center;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 100%;
+      padding: 12px;
+      margin: 10px 0;
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      transition: all 0.3s ease;
+    }
+
+    input:focus {
+      border-color: #007BFF;
+      box-shadow: 0 0 5px rgba(0, 123, 255, 0.5);
+      outline: none;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background: #007BFF;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: background 0.3s ease, transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    button:hover {
+      background: #0056b3;
+      transform: scale(1.02);
+    }
+
+    button:disabled {
+      background: #aaa;
+      cursor: not-allowed;
+    }
+
+    .spinner {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid white;
+      border-radius: 50%;
+      width: 18px;
+      height: 18px;
+      animation: spin 1s linear infinite;
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      margin-top: -9px;
+      margin-left: -9px;
+      display: none;
+    }
+
+    button.loading .spinner {
+      display: block;
+    }
+
+    button.loading span {
+      visibility: hidden;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <div class="login-form">
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="Email" required />
+    <input type="password" id="password" placeholder="Password" required />
+    <button id="loginBtn">
+      <div class="spinner"></div>
+      <span>Login</span>
+    </button>
+  </div>
+
+  <script>
+    const loginBtn = document.getElementById('loginBtn');
+    let EM = document.getElementById('email');
+    let PA = document.getElementById('password');
+    loginBtn.addEventListener('click', function () {
+      this.classList.add('loading');
+      this.disabled = true;
+      let correctEmail = "kozhin@gmail.com";
+      let correctPassword = "1234";
+      if(EM.value === correctEmail && PA.value === correctPassword){
+
+      location.href = "anime.html";
+      }else{
+      setTimeout(() => {
+        this.classList.remove('loading');
+        this.disabled = false;
+        alert('Logged in (check email or password)');
+      }, 2000);
+    }
+    });
+  
+  </script>
+</body>
+</html>

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime Page</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background-color: #121212;
+      color: white;
+    }
+    .header {
+      background: #1f1f1f;
+      padding: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .container {
+      display: flex;
+      height: calc(100vh - 60px);
+      overflow: hidden;
+    }
+    #toggle-theme {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  color: inherit;
+} 
+#home-button {
+  background: none;
+  border: none;
+  font-size: 1rem;
+  cursor: pointer;
+  color: inherit;
+}
+    aside.episode-list {
+      width: 250px;
+      background: #1a1a1a;
+      overflow-y: auto;
+      border-right: 2px solid #333;
+      padding: 10px;
+    }
+    .video-player {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px;
+      overflow: hidden;
+    }
+    aside.anime-info {
+      width: 300px;
+      background: #1a1a1a;
+      overflow-y: auto;
+      border-left: 2px solid #333;
+      padding: 10px;
+    }
+    .video-container {
+      width: 100%;
+      height: 500px;
+      background: black;
+      border-radius: 10px;
+      overflow: hidden;
+      box-shadow: 0 0 20px rgba(0,0,0,0.7);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    video {
+      width: 100%;
+      height: 100%;
+      background: black;
+    }
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    li {
+      padding: 10px;
+      border-bottom: 1px solid #333;
+      cursor: pointer;
+    }
+    li.active {
+      background: #4caf50;
+      font-weight: bold;
+    }
+    .group-buttons, .season-buttons {
+      margin-bottom: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+    .group-buttons button, .season-buttons button, #source-buttons button {
+      padding: 5px 10px;
+      background: #333;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .group-buttons button:hover, .season-buttons button:hover, #source-buttons button:hover {
+      background: #555;
+    }
+    #source-buttons {
+      margin-top: 10px;
+      text-align: center;
+    }
+    img#anime-image {
+      width: 100%;
+      border-radius: 10px;
+    }
+    h2, h3 {
+      margin-top: 10px;
+      margin-bottom: 5px;
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <button id="home-button">Home</button>
+  <h1 id="anime-title">Loading...</h1>
+  <button id="toggle-theme">🌙</button>
+</header>
+
+<div class="container">
+  <aside class="episode-list">
+    <div id="season-buttons" class="season-buttons"></div>
+    <div id="group-buttons" class="group-buttons"></div>
+    <h2>Episodes</h2>
+    <ul id="episodes"></ul>
+  </aside>
+
+  <main class="video-player">
+    <div class="video-container">
+      <video id="player" controls></video>
+    </div>
+    <div id="source-buttons">
+      <button id="play-vidsrc">▶️ Reload Stream</button>
+    </div>
+  </main>
+
+  <aside class="anime-info">
+    <img id="anime-image" src="" alt="Anime Poster" />
+    <h2>Description</h2>
+    <p id="anime-description">Loading description...</p>
+    <h3 id="anime-rating">Rating: ⭐⭐⭐⭐⭐</h3>
+  </aside>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+
+<script>
+const urlParams = new URLSearchParams(window.location.search);
+const animeId = urlParams.get('id');
+
+const animeTitle = document.getElementById("anime-title");
+const animeImage = document.getElementById("anime-image");
+const animeDescription = document.getElementById("anime-description");
+const animeRating = document.getElementById("anime-rating");
+const episodesList = document.getElementById("episodes");
+const groupButtons = document.getElementById("group-buttons");
+const seasonButtons = document.getElementById("season-buttons");
+const player = document.getElementById("player");
+
+const playVidsrcBtn = document.getElementById("play-vidsrc");
+
+let currentTitle = "";
+let totalEpisodes = 12;
+let selectedEpisode = 1;
+
+async function fetchAnimeDetails(id) {
+  try {
+    const res = await fetch(`https://api.jikan.moe/v4/anime/${id}/full`);
+    const data = await res.json();
+    const anime = data.data;
+
+    currentTitle = anime.title;
+    animeTitle.textContent = anime.title;
+    animeImage.src = anime.images.jpg.image_url;
+    animeDescription.textContent = anime.synopsis || "No description available.";
+    animeRating.textContent = `Rating: ⭐ (${anime.score || "N/A"})`;
+
+    totalEpisodes = anime.episodes || 5;
+    createEpisodeGroups(totalEpisodes);
+    loadEpisodes(1, Math.min(totalEpisodes, 50));
+    loadStreamingSource(1);
+
+    createSeasonButtons(anime.relations);
+
+  } catch (error) {
+    console.error("Error fetching anime details:", error);
+  }
+}
+
+function createEpisodeGroups(total) {
+  groupButtons.innerHTML = "";
+  if (total <= 50) return;
+
+  for (let i = 1; i <= total; i += 50) {
+    const btn = document.createElement("button");
+    btn.textContent = `${i}-${Math.min(i+49, total)}`;
+    btn.addEventListener("click", () => {
+      loadEpisodes(i, Math.min(i+49, total));
+    });
+    groupButtons.appendChild(btn);
+  }
+}
+
+function loadEpisodes(start, end) {
+  episodesList.innerHTML = "";
+  for (let i = start; i <= end; i++) {
+    const li = document.createElement("li");
+    li.textContent = `Episode ${i}`;
+    li.dataset.ep = i;
+    li.addEventListener("click", () => {
+      selectedEpisode = i;
+      loadStreamingSource(i);
+      highlightSelectedEpisode(i);
+    });
+    episodesList.appendChild(li);
+  }
+}
+
+function highlightSelectedEpisode(ep) {
+  const items = episodesList.querySelectorAll("li");
+  items.forEach(item => {
+    item.classList.remove("active");
+    if (Number(item.dataset.ep) === ep) {
+      item.classList.add("active");
+    }
+  });
+}
+
+function createSeasonButtons(relations) {
+  seasonButtons.innerHTML = "";
+  if (!relations || relations.length === 0) return;
+
+  const seasons = [];
+
+  relations.forEach(relation => {
+    if (relation.relation === "Sequel" || relation.relation === "Prequel") {
+      relation.entry.forEach(entry => {
+        seasons.push({ id: entry.mal_id, title: entry.name });
+      });
+    }
+  });
+
+  seasons.sort((a, b) => a.title.localeCompare(b.title));
+
+  seasons.forEach((season, index) => {
+    const button = document.createElement("button");
+    button.textContent = `Season ${index + 1}`;
+    button.addEventListener("click", () => {
+      fetchAnimeDetails(season.id);
+    });
+    seasonButtons.appendChild(button);
+  });
+}
+
+async function loadStreamingSource(ep) {
+  try {
+    const search = await fetch(`https://aniwatch-api-v2.vercel.app/anime/search?query=${encodeURIComponent(currentTitle)}`);
+    const searchData = await search.json();
+    const animeSlug = searchData.results[0]?.id;
+
+    if (!animeSlug) {
+      console.error("Anime not found on HiAnime API.");
+      return;
+    }
+
+    const streaming = await fetch(`https://aniwatch-api-v2.vercel.app/anime/episode-srcs?id=${animeSlug}&episode=${ep}`);
+    const streamData = await streaming.json();
+    const sources = streamData.sources;
+
+    if (!sources || sources.length === 0) {
+      console.error("No streaming sources found.");
+      return;
+    }
+
+    const streamUrl = sources[0].url;
+
+    if (streamUrl.endsWith(".m3u8")) {
+      setupHls(streamUrl);
+    } else {
+      player.src = streamUrl;
+    }
+
+  } catch (error) {
+    console.error("Error loading stream:", error);
+  }
+}
+
+function setupHls(url) {
+  if (Hls.isSupported()) {
+    const hls = new Hls();
+    hls.loadSource(url);
+    hls.attachMedia(player);
+  } else if (player.canPlayType('application/vnd.apple.mpegurl')) {
+    player.src = url;
+  }
+}
+
+playVidsrcBtn.addEventListener("click", () => {
+  loadStreamingSource(selectedEpisode);
+});
+
+document.getElementById("home-button").addEventListener("click", () => {
+  window.location.href = "anime.html";
+});
+document.getElementById("toggle-theme").addEventListener("click", () => {
+  document.body.classList.toggle("light");
+  localStorage.setItem("theme", document.body.classList.contains("light") ? "light" : "dark");
+});
+
+if (localStorage.getItem("theme") === "light") {
+  document.body.classList.add("light");
+}
+
+fetchAnimeDetails(animeId);
+</script>
+
+</body>
+</html>

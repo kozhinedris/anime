@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anime Cinema</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" type="text/css" media="screen" href="style.css">
+</head>
+<body>
+
+<header class="header">
+  <div class="logo">🎥 Anime Cinema</div>
+  <div class="search-container">
+    <input type="text" id="search" placeholder="Search anime..." />
+  </div>
+  <button id="toggle-theme" title="Toggle Dark Mode">🌙</button>
+  
+</header>
+
+<nav class="nav">
+  <button class="filter-btn" data-filter="seasonal">Seasonal</button>
+  <button class="filter-btn" data-filter="ranked">Top Ranked</button>
+  <button class="filter-btn" data-filter="popular">Most Popular</button>
+</nav>
+
+<main id="anime-list" class="grid"></main>
+
+<div class="pagination-container">
+  <button id="prev-btn" disabled>◀️ Back</button>
+  <button id="next-btn">Next 20 ▶️</button>
+</div>
+
+<footer class="footer">
+  <p>&copy; 2025 Anime Cinema for anime fans.</p>
+</footer>
+
+<script>
+  let currentPage = 1;
+  let currentFilter = "seasonal";
+  let searchQuery = "";
+
+  const animeList = document.getElementById("anime-list");
+  const nextBtn = document.getElementById("next-btn");
+  const prevBtn = document.getElementById("prev-btn");
+  const searchInput = document.getElementById("search");
+  const toggleThemeBtn = document.getElementById("toggle-theme");
+  const filterBtns = document.querySelectorAll(".filter-btn");
+
+  function getApiUrl(filter, page) {
+    if (searchQuery.trim()) {
+      return `https://api.jikan.moe/v4/anime?q=${encodeURIComponent(searchQuery)}&page=${page}&limit=20`;
+    }
+
+    switch (filter) {
+      case "ranked":
+        return `https://api.jikan.moe/v4/top/anime?page=${page}&limit=20&filter=airing&type=tv`;
+      case "popular":
+        return `https://api.jikan.moe/v4/top/anime?page=${page}&limit=20&filter=bypopularity&type=tv`;
+      default:
+        return `https://api.jikan.moe/v4/seasons/now?page=${page}&limit=20`;
+    }
+  }
+
+  function fetchAnime(page = 1) {
+    animeList.innerHTML = "<p>Loading...</p>";
+    fetch(getApiUrl(currentFilter, page))
+      .then(res => res.json())
+      .then(data => {
+        renderAnime(data.data);
+      })
+      .catch(() => {
+        animeList.innerHTML = "<p>Error loading anime. Try again later.</p>";
+      });
+  }
+
+  function renderAnime(animes) {
+    animeList.innerHTML = "";
+    if (!animes.length) {
+      animeList.innerHTML = "<p>No anime found for your search.</p>";
+      return;
+    }
+
+    animes.forEach(anime => {
+      const card = document.createElement("div");
+      card.className = "anime-card";
+      card.innerHTML = `
+        <img src="${anime.images.jpg.image_url}" alt="${anime.title}" />
+        <div class="info">
+          <h3>${anime.title}</h3>
+          <p>${anime.synopsis ? anime.synopsis.substring(0, 120) + "..." : "No description available."}</p>
+        </div>
+      `;
+      card.addEventListener("click", () => {
+        // Redirect to anime-page.html with anime id
+        window.location.href = `anime-page.html?id=${anime.mal_id}`;
+      });
+      animeList.appendChild(card);
+    });
+  }
+
+  function updatePagination() {
+    prevBtn.disabled = currentPage === 1;
+  }
+
+  nextBtn.addEventListener("click", () => {
+    currentPage++;
+    fetchAnime(currentPage);
+    updatePagination();
+  });
+
+  prevBtn.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage--;
+      fetchAnime(currentPage);
+      updatePagination();
+    }
+  });
+
+  toggleThemeBtn.addEventListener("click", () => {
+    document.body.classList.toggle("light");
+    localStorage.setItem("theme", document.body.classList.contains("light") ? "light" : "dark");
+  });
+
+  filterBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      searchQuery = "";
+      currentFilter = btn.dataset.filter;
+      currentPage = 1;
+      fetchAnime(currentPage);
+      updatePagination();
+    });
+  });
+
+  searchInput.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      searchQuery = searchInput.value.trim();
+      currentPage = 1;
+      fetchAnime(currentPage);
+      updatePagination();
+    }
+  });
+
+  if (localStorage.getItem("theme") === "light") {
+    document.body.classList.add("light");
+  }
+
+  fetchAnime(currentPage);
+  updatePagination();
+</script>
+
+</body>
+</html>
